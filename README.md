@@ -1,4 +1,3 @@
-Here is a comprehensive, production-ready `README.md` tailored for your **Dur Muhammad Noonari - Finance & Property Management Pro** project.
 
 ---
 
