@@ -29,6 +29,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <!-- Html5-QRCode Scanner Library CDN -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <!-- Tesseract.js OCR Engine CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <style>
@@ -51,8 +53,8 @@
     <div id="receipt-template">
         <div class="receipt-box" id="receipt-content" style="padding: 35px; border: 2px solid #4f46e5; background: white; color: #1e293b;">
             <div style="text-align: center; border-bottom: 3px double #4f46e5; padding-bottom: 12px; margin-bottom: 15px;">
-                <h1 style="color: #4f46e5; margin: 0; font-size: 28px; font-weight: 800; text-transform: uppercase;">NOONARI Housing</h1>
-                <p style="margin: 3px 0; color: #1e293b; font-size: 11px; font-weight: 600; letter-spacing: 2px;">OFFICIAL RECEIPT & STATEMENT</p>
+                <h1 style="color: #4f46e5; margin: 0; font-size: 28px; font-weight: 800; text-transform: uppercase;">NOONARI HOUSING</h1>
+                <p style="margin: 3px 0; color: #1e293b; font-size: 11px; font-weight: 600; letter-spacing: 2px;">RENT PAYMENT RECEIPT</p>
             </div>
 
             <div style="padding: 8px 0; margin-bottom: 12px; display: flex; justify-content: space-between; border-bottom: 1px solid #eee;">
@@ -77,9 +79,13 @@
                     <span style="color: #666; font-size: 11px;">Property:</span>
                     <span style="font-weight: bold; font-size: 11px;" id="rcp-house">House Name</span>
                 </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                    <span style="color: #666; font-size: 11px;">Rent Month:</span>
+                    <span style="font-weight: bold; font-size: 11px;" id="rcp-month">Current</span>
+                </div>
                 
                 <div style="margin-top: 8px; border-top: 1px dashed #cbd5e1; padding-top: 8px;">
-                    <p style="margin: 0 0 6px 0; font-size: 10px; font-weight: bold; color: #4f46e5; text-transform: uppercase;">Itemized Statement Breakdown:</p>
+                    <p style="margin: 0 0 6px 0; font-size: 10px; font-weight: bold; color: #4f46e5; text-transform: uppercase;">Payment Details:</p>
                     <div id="rcp-breakdown-list" style="font-size: 11px;"></div>
                 </div>
 
@@ -88,8 +94,16 @@
                     <span style="font-weight: bold; color: #059669; font-size: 11px;" id="rcp-amt">Rs 0</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; margin-top: 4px;">
-                    <span style="color: #dc2626; font-weight: bold; font-size: 11px;">REMAINING BALANCE DUE:</span>
+                    <span style="color: #dc2626; font-weight: bold; font-size: 11px;">REMAINING BALANCE:</span>
                     <span style="font-weight: bold; color: #dc2626; font-size: 11px;" id="rcp-rem">Rs 0</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 10px; color: #475569;">
+                    <span>Payment Method:</span>
+                    <span style="font-weight: bold;" id="rcp-method">Cash</span>
+                </div>
+                <div id="rcp-account-info" style="display: none; justify-content: space-between; margin-top: 2px; font-size: 10px; color: #475569;">
+                    <span>Payment Account:</span>
+                    <span style="font-weight: bold;" id="rcp-account-details">Muhammad Usama (03197921318)</span>
                 </div>
             </div>
 
@@ -101,7 +115,7 @@
                 <div style="text-align: right;">
                     <div id="rcp-stamp" style="border: 2px solid #059669; color: #059669; padding: 4px 10px; border-radius: 5px; font-weight: bold; transform: rotate(-5deg); font-size: 13px; display: inline-block; margin-bottom: 6px;">PAID</div>
                     <p style="margin: 0; font-size: 9px; color: #999;">Authorized Signature</p>
-                    <p style="margin: 2px 0 0 0; font-family: cursive; font-size: 15px; border-top: 1px solid #000; padding-top: 2px; min-width: 120px;">Dur Muhammad Noonari</p>
+                    <p style="margin: 2px 0 0 0; font-family: cursive; font-size: 15px; border-top: 1px solid #000; padding-top: 2px; min-width: 120px;">Muhammad Usama</p>
                 </div>
             </div>
         </div>
@@ -138,10 +152,8 @@
                 <button onclick="window.closeQRScannerModal()" class="text-slate-400 hover:text-rose-500 text-lg font-bold"><i class="fas fa-xmark"></i></button>
             </div>
 
-            <!-- Live Camera Viewport -->
             <div id="qr-reader-viewport" class="overflow-hidden rounded-2xl bg-black border border-slate-700 w-full min-h-[250px] flex items-center justify-center mb-4"></div>
 
-            <!-- Image File Drag & Drop Fallback -->
             <div class="text-center mb-4">
                 <p class="text-xs text-slate-400 mb-2">- OR Upload QR Image File -</p>
                 <input type="file" id="qr-input-file" accept="image/*" class="hidden" onchange="scanQRImageFile(event)">
@@ -150,8 +162,62 @@
                 </button>
             </div>
 
-            <!-- Match Result Card -->
             <div id="qr-match-result" class="hidden p-4 rounded-2xl text-xs space-y-2 border"></div>
+        </div>
+    </div>
+
+    <!-- Rent Reminder Modal -->
+    <div id="modal-rent-reminder" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden z-[250] items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-indigo-500/30">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fab fa-whatsapp text-emerald-500"></i> Rent Payment Reminder
+                </h3>
+                <button onclick="window.closeRentReminderModal()" class="text-slate-400 hover:text-rose-500 text-lg font-bold"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div id="reminder-preview-box" class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-600 text-xs font-mono whitespace-pre-wrap mb-4 max-h-60 overflow-y-auto"></div>
+            
+            <div class="flex flex-col items-center justify-center p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl mb-4">
+                <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Easypaisa Payment QR Code</p>
+                <div id="reminder-qr-code" class="p-2 bg-white rounded-xl shadow-inner"></div>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="window.closeRentReminderModal()" class="flex-1 py-3 text-xs font-bold text-slate-500">Cancel</button>
+                <button id="btn-send-reminder-wa" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl text-xs font-bold shadow-lg flex items-center justify-center gap-2">
+                    <i class="fab fa-whatsapp text-sm"></i> Send Reminder
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Settings Config Modal -->
+    <div id="modal-payment-settings" class="fixed inset-0 bg-slate-900/80 backdrop-blur-md hidden z-[250] items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-indigo-500/30">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fas fa-gear text-indigo-500"></i> Payment Gateway Settings
+                </h3>
+                <button onclick="window.closePaymentSettingsModal()" class="text-slate-400 hover:text-rose-500 text-lg font-bold"><i class="fas fa-xmark"></i></button>
+            </div>
+            <form id="payment-settings-form" class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-slate-400 uppercase mb-1 block">Payment Method</label>
+                    <input type="text" id="cfg-pay-method" class="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-bold" required>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-400 uppercase mb-1 block">Account Name</label>
+                    <input type="text" id="cfg-pay-name" class="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-bold" required>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-400 uppercase mb-1 block">Account Number</label>
+                    <input type="text" id="cfg-pay-number" class="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-bold" required>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="window.closePaymentSettingsModal()" class="flex-1 py-3 text-xs font-bold text-slate-500">Cancel</button>
+                    <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl text-xs font-bold">Save Settings</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -211,6 +277,9 @@
                 </div>
 
                 <div class="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 space-y-3">
+                    <button onclick="window.openPaymentSettingsModal()" class="w-full bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2">
+                        <i class="fas fa-sliders text-indigo-500"></i> Payment Settings
+                    </button>
                     <button onclick="window.openQRScannerModal()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 px-3 rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2">
                         <i class="fas fa-qrcode"></i> Scan & Verify Document
                     </button>
@@ -337,6 +406,17 @@
                 <section id="view-bills" class="hidden space-y-6">
                     <h2 class="text-3xl font-bold text-center text-slate-900 dark:text-white">Post Utility Bills</h2>
                     <div class="bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 max-w-xl mx-auto">
+                        
+                        <!-- AI Bill OCR Upload Box -->
+                        <div class="mb-6 p-5 border-2 border-dashed border-indigo-300 dark:border-indigo-700 rounded-2xl bg-indigo-50/50 dark:bg-slate-700/30 text-center">
+                            <input type="file" id="bill-ocr-input" accept="image/*" class="hidden" onchange="processBillOCR(event)">
+                            <button type="button" onclick="document.getElementById('bill-ocr-input').click()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-5 py-3 rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 mx-auto active:scale-95">
+                                <i class="fas fa-wand-magic-sparkles"></i> Auto-Extract Bill Dues with AI OCR
+                            </button>
+                            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-2 font-medium">Upload or snap a photo of a HESCO or SSGC utility paper bill</p>
+                            <div id="ocr-status" class="hidden text-xs font-bold text-indigo-600 dark:text-indigo-400 mt-3"></div>
+                        </div>
+
                         <form id="bill-form" class="space-y-4">
                             <div>
                                 <label class="text-xs font-bold text-slate-400 uppercase mb-1 block">Property</label>
@@ -569,30 +649,136 @@
             </div>
         </div>
 
-        <!-- Receive Payment Modal -->
-        <div id="modal-receive-payment" class="bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-3xl p-8 w-full max-w-md hidden">
-            <h3 class="text-xl font-bold mb-2" id="receive-modal-title">Receive Payment</h3>
-            <p class="text-xs text-slate-400 mb-4">Enter amount paying today. Active pending rent & utility balances will be auto-calculated.</p>
-            <form id="receive-form" class="space-y-4">
-                <input type="hidden" id="receive-tenant-id">
-                <input type="hidden" id="receive-house-id">
-                <input type="hidden" id="receive-agreed-rent">
+        <!-- Multi-Step Pay Bill / Collect Payment Modal Workflow -->
+        <div id="modal-receive-payment" class="bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-3xl p-6 w-full max-w-lg hidden relative">
+            <button onclick="window.closeModals()" class="absolute right-5 top-5 text-slate-400 hover:text-rose-500"><i class="fas fa-xmark text-lg"></i></button>
+            
+            <!-- Modal Header Indicator -->
+            <div class="mb-6">
+                <h3 class="text-xl font-bold" id="receive-modal-title">Generate Pay Bill / Collect Payment</h3>
+                <div class="flex items-center gap-1 mt-3">
+                    <div id="step-dot-1" class="h-1.5 flex-1 rounded-full bg-indigo-600"></div>
+                    <div id="step-dot-2" class="h-1.5 flex-1 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+                    <div id="step-dot-3" class="h-1.5 flex-1 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+                    <div id="step-dot-4" class="h-1.5 flex-1 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+                    <div id="step-dot-5" class="h-1.5 flex-1 rounded-full bg-slate-200 dark:bg-slate-700"></div>
+                </div>
+            </div>
+
+            <!-- STEP 1: Details -->
+            <div id="pay-step-1" class="space-y-4">
+                <div class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-100 dark:border-slate-600 space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-slate-500 dark:text-slate-400">Total Outstanding Bill:</span>
+                        <span class="font-bold text-slate-800 dark:text-slate-100" id="step1-total-bill">Rs 0</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-200 dark:border-slate-600">
+                        <span class="font-bold text-slate-700 dark:text-slate-200">Amount Paid Today:</span>
+                        <input type="number" id="pay-input-amount" class="w-36 p-2 bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-600 rounded-xl text-right font-extrabold text-emerald-600 dark:text-emerald-400" oninput="window.calcPaymentStep1()">
+                    </div>
+                    <div class="flex justify-between pt-1 text-xs">
+                        <span class="text-slate-400">Remaining Balance:</span>
+                        <span class="font-bold text-rose-500" id="step1-remaining-bill">Rs 0</span>
+                    </div>
+                </div>
                 <div>
-                    <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Amount Paying Now (Rs)</label>
-                    <input type="number" id="receive-amount" placeholder="0.00" class="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl font-bold text-lg text-emerald-600 dark:text-emerald-400" required>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Description / Month</label>
+                    <input type="text" id="pay-input-desc" class="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-semibold" placeholder="Monthly Rent Payment">
                 </div>
-                <input type="text" id="receive-desc" placeholder="Payment Description (e.g., Rent + Utilities)" class="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl" required>
-                
-                <div class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600">
-                    <input type="checkbox" id="receive-pdf" class="w-5 h-5 text-indigo-600 rounded cursor-pointer" checked>
-                    <label for="receive-pdf" class="text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer">Generate PDF Receipt (With Scannable QR)</label>
+                <button onclick="window.goToPayStep(2)" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-xl font-bold shadow-lg">Next: Select Payment Method &rarr;</button>
+            </div>
+
+            <!-- STEP 2: Payment Method Select -->
+            <div id="pay-step-2" class="hidden space-y-4">
+                <p class="text-xs font-bold text-slate-400 uppercase">How was this payment made?</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <button type="button" onclick="window.selectPaymentMethod('Cash')" id="btn-method-cash" class="p-5 border-2 rounded-2xl flex flex-col items-center gap-2 hover:border-indigo-500 transition-all border-slate-200 dark:border-slate-700">
+                        <span class="text-3xl">💵</span>
+                        <span class="font-bold text-sm">Cash</span>
+                    </button>
+                    <button type="button" onclick="window.selectPaymentMethod('Online Payment')" id="btn-method-online" class="p-5 border-2 rounded-2xl flex flex-col items-center gap-2 hover:border-indigo-500 transition-all border-slate-200 dark:border-slate-700">
+                        <span class="text-3xl">📱</span>
+                        <span class="font-bold text-sm">Online Payment</span>
+                    </button>
                 </div>
-                
-                <div class="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
-                    <button type="button" onclick="window.closeModals()" class="flex-1 py-3 font-bold text-slate-500">Cancel</button>
-                    <button type="submit" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-bold">Save Payment</button>
+                <div class="flex gap-2 pt-2">
+                    <button onclick="window.goToPayStep(1)" class="flex-1 py-3 text-xs font-bold text-slate-500">&larr; Back</button>
+                    <button id="btn-step2-next" onclick="window.proceedStep2Next()" disabled class="flex-1 bg-indigo-600 opacity-50 cursor-not-allowed text-white py-3.5 rounded-xl font-bold shadow-lg">Next &rarr;</button>
                 </div>
-            </form>
+            </div>
+
+            <!-- STEP 3: Upload Proof (Online Only) -->
+            <div id="pay-step-3" class="hidden space-y-4">
+                <div class="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <p class="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400">Send Online Payment To:</p>
+                        <p class="font-extrabold text-sm text-slate-800 dark:text-slate-100" id="step3-gateway-name">Easypaisa</p>
+                        <p class="text-xs font-bold text-indigo-600 dark:text-indigo-400" id="step3-gateway-acc">Muhammad Usama — 03197921318</p>
+                    </div>
+                    <div id="step3-qr-box" class="p-1 bg-white rounded-lg shadow"></div>
+                </div>
+
+                <div>
+                    <label class="text-xs font-bold text-slate-400 uppercase mb-1 block">Upload Payment Receipt / Proof <span class="text-rose-500">*</span></label>
+                    <input type="file" id="pay-proof-input" accept="image/jpeg,image/png,image/jpg,application/pdf" class="hidden" onchange="window.handleProofUpload(event)">
+                    <div onclick="document.getElementById('pay-proof-input').click()" class="border-2 border-dashed border-indigo-300 dark:border-indigo-700 bg-indigo-50/50 dark:bg-slate-700/30 p-6 rounded-2xl text-center cursor-pointer hover:bg-indigo-100/50 transition-all">
+                        <i class="fas fa-cloud-arrow-up text-2xl text-indigo-500 mb-2"></i>
+                        <p class="text-xs font-bold text-slate-700 dark:text-slate-200" id="pay-proof-filename">Click to Upload Proof (PDF, JPG, PNG)</p>
+                        <p class="text-[9px] text-slate-400 mt-1">Max size: 5MB</p>
+                    </div>
+                </div>
+
+                <div id="pay-proof-preview-container" class="hidden p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl text-xs flex justify-between items-center border border-slate-200 dark:border-slate-600">
+                    <span class="font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1"><i class="fas fa-file-circle-check"></i> <span id="proof-attached-name">receipt.png</span></span>
+                    <button onclick="window.clearUploadedProof()" class="text-rose-500 text-xs font-bold"><i class="fas fa-trash"></i> Remove</button>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button onclick="window.goToPayStep(2)" class="flex-1 py-3 text-xs font-bold text-slate-500">&larr; Back</button>
+                    <button id="btn-step3-next" onclick="window.goToPayStep(4)" disabled class="flex-1 bg-indigo-600 opacity-50 cursor-not-allowed text-white py-3.5 rounded-xl font-bold shadow-lg">Review Payment &rarr;</button>
+                </div>
+            </div>
+
+            <!-- STEP 4: Review Payment -->
+            <div id="pay-step-4" class="hidden space-y-4">
+                <div class="p-4 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-2xl space-y-2 text-xs">
+                    <div class="flex justify-between"><span class="text-slate-400">Tenant:</span><span class="font-bold" id="rev-tenant-name">---</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Property:</span><span class="font-bold" id="rev-house-name">---</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Total Bill Dues:</span><span class="font-bold" id="rev-total-bill">Rs 0</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Amount Paid:</span><span class="font-bold text-emerald-600" id="rev-amount-paid">Rs 0</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Remaining Balance:</span><span class="font-bold text-rose-500" id="rev-remaining">Rs 0</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Payment Method:</span><span class="font-bold text-indigo-600" id="rev-method">Cash</span></div>
+                    <div class="flex justify-between"><span class="text-slate-400">Initial Status:</span><span class="font-bold text-amber-500" id="rev-status">Verified / Paid</span></div>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button onclick="window.goToPayStep(3)" id="btn-step4-back" class="flex-1 py-3 text-xs font-bold text-slate-500">&larr; Back</button>
+                    <button onclick="window.confirmAndSubmitPayment()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold shadow-lg">Confirm & Generate Receipt</button>
+                </div>
+            </div>
+
+            <!-- STEP 5: Receipt Generated & WhatsApp -->
+            <div id="pay-step-5" class="hidden space-y-4 text-center">
+                <div class="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <i class="fas fa-check text-2xl"></i>
+                </div>
+                <h4 class="text-lg font-bold">Payment Successfully Recorded!</h4>
+                <p class="text-xs text-slate-400">Receipt No: <span class="font-bold text-indigo-600" id="step5-receipt-no">#RCP-00000</span></p>
+
+                <div class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-600 text-left space-y-1.5 text-xs">
+                    <p><strong>Tenant:</strong> <span id="s5-tenant">---</span></p>
+                    <p><strong>Property:</strong> <span id="s5-property">---</span></p>
+                    <p><strong>Amount Paid:</strong> <span id="s5-paid" class="text-emerald-600 font-bold">Rs 0</span></p>
+                    <p><strong>Method:</strong> <span id="s5-method">Cash</span></p>
+                </div>
+
+                <div class="flex flex-col gap-2 pt-2">
+                    <button id="btn-step5-wa" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold shadow-md flex items-center justify-center gap-2 text-xs">
+                        <i class="fab fa-whatsapp text-sm"></i> Send Receipt on WhatsApp
+                    </button>
+                    <button onclick="window.closeModals()" class="w-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-2.5 rounded-xl text-xs font-bold">Done / Close</button>
+                </div>
+            </div>
         </div>
 
         <!-- Loan Repayment Modal -->
@@ -618,12 +804,20 @@
             billCollections: [],   
             children: [],          
             activeHouseId: null,
-            verificationRegistry: {} 
+            verificationRegistry: {},
+            paymentSettings: {
+                method: "Easypaisa",
+                accountNumber: "03197921318",
+                accountName: "Muhammad Usama"
+            }
         };
 
         const STORAGE_KEY = 'noonari_family_pro_data_v7';
         const APP_PASS = '6784';
         let tempImageBase64 = null;
+        let tempProofBase64 = null;
+        let tempProofMeta = null;
+        let activePayState = {};
         let doughnutChartInstance = null;
         let trendChartInstance = null;
         let html5QrScanner = null;
@@ -639,6 +833,83 @@
             save();
         }
 
+        // --- Payment Settings Modal Handlers ---
+        window.openPaymentSettingsModal = () => {
+            const cfg = state.paymentSettings || { method: "Easypaisa", accountNumber: "03197921318", accountName: "Muhammad Usama" };
+            document.getElementById('cfg-pay-method').value = cfg.method;
+            document.getElementById('cfg-pay-name').value = cfg.accountName;
+            document.getElementById('cfg-pay-number').value = cfg.accountNumber;
+
+            document.getElementById('modal-payment-settings').classList.remove('hidden');
+            document.getElementById('modal-payment-settings').classList.add('flex');
+        };
+
+        window.closePaymentSettingsModal = () => {
+            document.getElementById('modal-payment-settings').classList.add('hidden');
+            document.getElementById('modal-payment-settings').classList.remove('flex');
+        };
+
+        document.getElementById('payment-settings-form').onsubmit = (e) => {
+            e.preventDefault();
+            state.paymentSettings = {
+                method: document.getElementById('cfg-pay-method').value.trim(),
+                accountName: document.getElementById('cfg-pay-name').value.trim(),
+                accountNumber: document.getElementById('cfg-pay-number').value.trim()
+            };
+            save();
+            closePaymentSettingsModal();
+            alert("Payment settings updated dynamically!");
+        };
+
+        // --- Rent Reminder Modal Handlers ---
+        window.openRentReminderModal = (hid, tid) => {
+            const h = state.houses.find(x => x.id === hid);
+            const t = h ? h.tenants.find(x => x.id === tid) : null;
+            if (!t) return alert("Tenant not found.");
+
+            const cfg = state.paymentSettings || { method: "Easypaisa", accountNumber: "03197921318", accountName: "Muhammad Usama" };
+            const currentMonthName = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            const dueDate = new Date();
+            dueDate.setDate(5);
+            const formattedDueDate = dueDate.toLocaleDateString('en-GB');
+
+            const message = `Rent Payment Reminder\n` +
+                `Dear ${t.name},\n` +
+                `Your rent for ${currentMonthName} is due.\n` +
+                `Property: ${h.name}\n` +
+                `Rent Amount: Rs. ${Number(t.rent).toLocaleString()}\n` +
+                `Due Date: ${formattedDueDate}\n\n` +
+                `You can pay through:\n` +
+                `${cfg.method}\n` +
+                `Account Name: ${cfg.accountName}\n` +
+                `Account Number: ${cfg.accountNumber}\n\n` +
+                `Please scan the QR code to make the payment.\n` +
+                `After making an online payment, please send the payment receipt/screenshot on WhatsApp.\n` +
+                `Thank you.`;
+
+            document.getElementById('reminder-preview-box').innerText = message;
+
+            const qrBox = document.getElementById('reminder-qr-code');
+            qrBox.innerHTML = '';
+            const qrPayload = `UPI/PAY:${cfg.method}:${cfg.accountNumber}:${cfg.accountName}`;
+            qrBox.appendChild(generateQRCanvas(qrPayload, 120));
+
+            const phone = formatPhoneNumberPK(t.whatsapp);
+            document.getElementById('btn-send-reminder-wa').onclick = () => {
+                if (!phone) return alert("Tenant WhatsApp number is missing or invalid.");
+                const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+                window.open(waUrl, '_blank');
+            };
+
+            document.getElementById('modal-rent-reminder').classList.remove('hidden');
+            document.getElementById('modal-rent-reminder').classList.add('flex');
+        };
+
+        window.closeRentReminderModal = () => {
+            document.getElementById('modal-rent-reminder').classList.add('hidden');
+            document.getElementById('modal-rent-reminder').classList.remove('flex');
+        };
+
         // --- Live QR Code Scanner & Match Logic ---
         window.openQRScannerModal = () => {
             document.getElementById('qr-match-result').classList.add('hidden');
@@ -653,9 +924,9 @@
                 { facingMode: "environment" },
                 { fps: 10, qrbox: { width: 200, height: 200 } },
                 onQRCodeScanned,
-                () => {} // Ignore scan errors
+                () => {}
             ).catch(err => {
-                document.getElementById('qr-reader-viewport').innerHTML = `<p class="text-xs text-slate-400 p-4 text-center">Camera unnavailable. Upload QR Image File below.</p>`;
+                document.getElementById('qr-reader-viewport').innerHTML = `<p class="text-xs text-slate-400 p-4 text-center">Camera unavailable. Upload QR Image File below.</p>`;
             });
         };
 
@@ -689,7 +960,6 @@
         }
 
         function onQRCodeScanned(decodedText) {
-            // Extract Document ID from URL
             let docId = decodedText;
             if (decodedText.includes('/v/')) {
                 docId = decodedText.split('/v/')[1];
@@ -734,6 +1004,88 @@
             }
         }
 
+        // --- AI OCR Processing Logic ---
+        async function processBillOCR(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const statusDiv = document.getElementById('ocr-status');
+            statusDiv.classList.remove('hidden');
+            statusDiv.className = 'text-xs font-bold text-indigo-600 dark:text-indigo-400 mt-3';
+            statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Initializing OCR Engine...';
+
+            try {
+                const result = await Tesseract.recognize(
+                    file,
+                    'eng',
+                    {
+                        logger: m => {
+                            if (m.status === 'recognizing text') {
+                                const progress = Math.round(m.progress * 100);
+                                statusDiv.innerHTML = `<i class="fas fa-microchip fa-spin mr-1"></i> Scanning Bill Text (${progress}%)...`;
+                            }
+                        }
+                    }
+                );
+
+                const text = result.data.text;
+                const upperText = text.toUpperCase();
+
+                if (upperText.includes('HESCO') || upperText.includes('ELECTRIC') || upperText.includes('FEEDER') || upperText.includes('KWH')) {
+                    document.getElementById('bill-type').value = 'Electricity';
+                } else if (upperText.includes('SSGC') || upperText.includes('SUI') || upperText.includes('GAS') || upperText.includes('HM3')) {
+                    document.getElementById('bill-type').value = 'Gas';
+                }
+
+                let extractedAmount = null;
+                const patterns = [
+                    /(?:PAYABLE\s+WITHIN\s+DUE\s+DATE|WITHIN\s+DUE\s+DATE|TOTAL\s+PAYABLE|AMOUNT\s+PAYABLE|NET\s+AMOUNT)\s*[:\.-]?\s*(?:RS|\.)?\s*([\d,]{3,7})/i,
+                    /(?:PAYABLE|DUE|TOTAL)\s*[:\.-]?\s*(?:RS|\.)?\s*([\d,]{3,7})/i
+                ];
+
+                for (const pattern of patterns) {
+                    const match = text.match(pattern);
+                    if (match && match[1]) {
+                        const cleaned = match[1].replace(/,/g, '').trim();
+                        const parsed = parseFloat(cleaned);
+                        if (!isNaN(parsed) && parsed > 50) {
+                            extractedAmount = parsed;
+                            break;
+                        }
+                    }
+                }
+
+                if (!extractedAmount) {
+                    const lines = text.split('\n');
+                    for (let line of lines) {
+                        if (/PAYABLE|DUE|TOTAL|AMOUNT/i.test(line)) {
+                            const numbers = line.match(/\b\d{3,6}\b/g);
+                            if (numbers && numbers.length > 0) {
+                                extractedAmount = parseFloat(numbers[0]);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (extractedAmount) {
+                    document.getElementById('bill-amount').value = extractedAmount;
+                    statusDiv.className = 'text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-3';
+                    statusDiv.innerHTML = `<i class="fas fa-circle-check mr-1"></i> Extracted Amount: <strong>Rs ${extractedAmount.toLocaleString()}</strong> (${document.getElementById('bill-type').value})`;
+                } else {
+                    statusDiv.className = 'text-xs font-bold text-amber-600 dark:text-amber-400 mt-3';
+                    statusDiv.innerHTML = '<i class="fas fa-triangle-exclamation mr-1"></i> Image scanned, but amount was unclear. Please type amount manually.';
+                }
+
+            } catch (err) {
+                console.error('OCR Error:', err);
+                statusDiv.className = 'text-xs font-bold text-rose-500 mt-3';
+                statusDiv.innerHTML = '<i class="fas fa-circle-xmark mr-1"></i> Failed to read image file. Please try a clearer photo.';
+            } finally {
+                event.target.value = ''; 
+            }
+        }
+
         function formatPhoneNumberPK(rawPhone) {
             if (!rawPhone) return '';
             let cleaned = rawPhone.replace(/\D/g, '');
@@ -767,7 +1119,12 @@
             initTheme();
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
-                try { state = JSON.parse(saved); } catch(e) { console.error("Corrupt storage data"); }
+                try { 
+                    state = JSON.parse(saved); 
+                    if (!state.paymentSettings) {
+                        state.paymentSettings = { method: "Easypaisa", accountNumber: "03197921318", accountName: "Muhammad Usama" };
+                    }
+                } catch(e) { console.error("Corrupt storage data"); }
             }
             
             document.getElementById('current-date-display').innerText = new Date().toLocaleDateString('en-PK', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -873,14 +1230,23 @@
 
         function generatePDF(data) {
             const element = document.getElementById('receipt-content');
-            const docId = 'RCP-' + Date.now().toString().slice(-6);
+            const cfg = state.paymentSettings || { method: "Easypaisa", accountNumber: "03197921318", accountName: "Muhammad Usama" };
             
-            document.getElementById('rcp-id').innerText = '#' + docId;
-            document.getElementById('rcp-date').innerText = new Date().toLocaleDateString('en-GB');
+            document.getElementById('rcp-id').innerText = '#' + (data.receiptNumber || ('RCP-' + Date.now().toString().slice(-6)));
+            document.getElementById('rcp-date').innerText = data.paymentDate || new Date().toLocaleDateString('en-GB');
             document.getElementById('rcp-tenant').innerText = data.tenantName;
             document.getElementById('rcp-cnic').innerText = data.cnic || 'N/A';
             document.getElementById('rcp-house').innerText = data.houseName;
-            
+            document.getElementById('rcp-month').innerText = data.rentMonth || new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+            document.getElementById('rcp-method').innerText = data.paymentMethod || 'Cash';
+            if (data.paymentMethod === 'Online Payment' || data.paymentMethod === 'Easypaisa') {
+                document.getElementById('rcp-account-info').style.display = 'flex';
+                document.getElementById('rcp-account-details').innerText = `${cfg.accountName} (${cfg.accountNumber})`;
+            } else {
+                document.getElementById('rcp-account-info').style.display = 'none';
+            }
+
             let breakdownHtml = '';
             if (data.items && data.items.length) {
                 data.items.forEach(item => {
@@ -892,7 +1258,7 @@
             } else {
                 breakdownHtml = `<div style="display:flex; justify-content:space-between;">
                     <span>• Agreement Rent Dues:</span>
-                    <span style="font-weight:bold;">Rs ${Number(data.agreedRent).toLocaleString()}</span>
+                    <span style="font-weight:bold;">Rs ${Number(data.agreedRent || data.totalBill).toLocaleString()}</span>
                 </div>`;
             }
             document.getElementById('rcp-breakdown-list').innerHTML = breakdownHtml;
@@ -911,11 +1277,11 @@
                 stamp.style.color = '#059669';
             }
 
-            registerVerificationDoc(docId, 'Rent & Utility Receipt', data);
+            registerVerificationDoc(data.receiptNumber || ('RCP-' + Date.now().toString().slice(-6)), 'Rent & Utility Receipt', data);
 
             const qrContainer = document.getElementById('qrcode-receipt-container');
             qrContainer.innerHTML = '';
-            const verifyUrl = `https://noonari-housing.verif.app/v/${docId}`;
+            const verifyUrl = `https://noonari-housing.verif.app/v/${data.receiptNumber || ('RCP-' + Date.now().toString().slice(-6))}`;
             const qrImg = generateQRCanvas(verifyUrl, 70);
             qrContainer.appendChild(qrImg);
 
@@ -966,7 +1332,7 @@
                 const agreementBody = document.getElementById('agreement-body');
                 agreementBody.innerHTML = `
                     <p>This Tenancy Agreement is executed on <strong>${formatDate(t.entryDate)}</strong>.</p>
-                    <p style="margin-top:8px;"><strong>LANDLORD:</strong> Dur Muhammad Noonari</p>
+                    <p style="margin-top:8px;"><strong>LANDLORD:</strong> Muhammad Usama / Dur Muhammad Noonari</p>
                     <p><strong>TENANT:</strong> ${t.name} (CNIC: ${t.cnic || 'N/A'})</p>
                     <p style="margin-top:8px;">WHEREAS Landlord agrees to let out property <strong>${h.name}</strong> for residential purposes at agreed monthly rent of <strong>Rs. ${Number(t.rent).toLocaleString()}/-</strong>.</p>
                     <p>Tenancy Agreement Expiry / Renewal Milestone Date: <strong>${formatDate(t.leaseEndDate)}</strong>.</p>
@@ -1012,6 +1378,11 @@
                 insights.push(`<div class="flex items-center text-amber-300 font-medium"><i class="fas fa-exclamation-triangle mr-2 text-amber-400"></i>⚠️ ${overdue10Days.length} tenant pending dues overdue for over 10 days.</div>`);
             } else {
                 insights.push(`<div class="flex items-center text-emerald-300 font-medium"><i class="fas fa-check-circle mr-2 text-emerald-400"></i>✅ No tenant accounts overdue by more than 10 days.</div>`);
+            }
+
+            const pendingOnlineCount = state.transactions.filter(t => t.paymentStatus === 'Pending Verification').length;
+            if (pendingOnlineCount > 0) {
+                insights.push(`<div class="flex items-center text-indigo-300 font-medium"><i class="fas fa-clock mr-2 text-indigo-400"></i>ℹ️ ${pendingOnlineCount} online rent payments uploaded pending admin verification.</div>`);
             }
 
             const curMonthKey = today.toISOString().slice(0, 7);
@@ -1132,7 +1503,7 @@
         }
 
         function renderDashboard() {
-            const inc = state.transactions.filter(t => t.type === 'income').reduce((s, t) => s + (t.amount || 0), 0);
+            const inc = state.transactions.filter(t => t.type === 'income' && t.verificationStatus !== 'Rejected').reduce((s, t) => s + (t.amount || 0), 0);
             const exp = state.transactions.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount || 0), 0);
             
             const rec = state.loans.filter(l => l.type === 'lent').reduce((s, l) => s + ((l.amount || 0) - (l.repayments||[]).reduce((a,b)=>a+(b.amount||0),0)), 0);
@@ -1151,7 +1522,11 @@
                         <div class="w-8 h-8 rounded-full flex items-center justify-center mr-3 ${t.type === 'income' ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-900/50 text-rose-600 dark:text-rose-400'}">
                             <i class="fas fa-${t.type === 'income' ? 'arrow-down' : 'arrow-up'} text-[10px]"></i>
                         </div>
-                        <div><p class="font-bold text-xs text-slate-800 dark:text-slate-200">${t.desc}</p><p class="text-[9px] text-slate-400 font-bold uppercase">${t.date} • ${t.cat} ${t.tenantName ? '• ' + t.tenantName : ''}</p></div>
+                        <div>
+                            <p class="font-bold text-xs text-slate-800 dark:text-slate-200">${t.desc}</p>
+                            <p class="text-[9px] text-slate-400 font-bold uppercase">${t.date} • ${t.cat} ${t.tenantName ? '• ' + t.tenantName : ''} ${t.paymentMethod ? '• ' + t.paymentMethod : ''}</p>
+                            ${t.verificationStatus ? `<span class="text-[8px] font-extrabold px-1.5 py-0.5 rounded ${t.verificationStatus === 'Verified' ? 'bg-emerald-100 text-emerald-600' : t.verificationStatus === 'Rejected' ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600'}">${t.verificationStatus}</span>` : ''}
+                        </div>
                     </div>
                     <span class="font-bold text-xs ${t.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">Rs ${(t.amount || 0).toLocaleString()}</span>
                 </div>`).join('') || '<p class="text-center text-slate-400 text-xs py-10 uppercase font-bold">No Transactions Found</p>';
@@ -1175,7 +1550,7 @@
                         <p class="text-sm font-bold text-slate-800 dark:text-slate-100">${c.tenantName}</p>
                         <p class="text-xs text-slate-500 dark:text-slate-400">Rs ${(c.amount || 0).toLocaleString()}</p>
                     </div>
-                    <button onclick="window.collectBill('${c.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow active:scale-95 transition-all">Mark Paid</button>
+                    <button onclick="window.openReceiveModal('${c.houseId}', '${c.tenantId}', '${c.tenantName.replace(/'/g, "\\'")}', ${c.amount})" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-xs font-bold shadow active:scale-95 transition-all">Collect Payment</button>
                 </div>`;
             });
             document.getElementById('pending-list').innerHTML = acts || '<p class="text-center text-slate-400 text-xs py-10 uppercase font-bold">No Pending Receivables</p>';
@@ -1214,9 +1589,11 @@
                                         </div>
                                     </div>
                                     <div class="flex gap-1 items-center">
-                                        ${is30DaysOrLess ? `<button onclick="window.sendLeaseRenewalWhatsApp('${h.id}', '${t.id}')" class="bg-amber-500 text-white px-2 py-1 rounded-md text-[9px] font-extrabold animate-pulse hover:bg-amber-600 transition-colors"><i class="fab fa-whatsapp"></i> Renew (${daysUntilRenewal}d left)</button>` : ''}
+                                        <button onclick="window.openRentReminderModal('${h.id}', '${t.id}')" class="bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 px-2.5 py-1 rounded-md text-[10px] font-bold hover:bg-amber-200 transition-colors flex items-center gap-1" title="Send Rent Reminder with QR">
+                                            <i class="fas fa-bell text-xs"></i> Reminder
+                                        </button>
                                         <button onclick="window.sendWhatsAppNotice('${h.id}', '${t.id}')" class="bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-md text-[10px] font-bold hover:bg-emerald-200 transition-colors flex items-center gap-1" title="WhatsApp Dues Hub">
-                                            <i class="fab fa-whatsapp text-xs"></i> WhatsApp
+                                            <i class="fab fa-whatsapp text-xs"></i> Notice
                                         </button>
                                         <button onclick="window.deleteTenant('${h.id}', '${t.id}')" class="bg-rose-100 dark:bg-rose-900/50 text-rose-500 dark:text-rose-400 w-6 h-6 rounded-md text-[10px] flex items-center justify-center hover:bg-rose-200 transition-colors"><i class="fas fa-xmark"></i></button>
                                     </div>
@@ -1224,7 +1601,7 @@
                                 
                                 <div class="flex gap-2 mt-1">
                                     <button onclick="window.openReceiveModal('${h.id}', '${t.id}', '${t.name.replace(/'/g, "\\'")}', ${t.rent})" class="flex-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 shadow-sm transition-all">
-                                        <i class="fas fa-hand-holding-dollar"></i> Pay / Less Pay
+                                        <i class="fas fa-hand-holding-dollar"></i> Collect Payment
                                     </button>
                                     <button onclick="window.generateAgreementPDF('${h.id}', '${t.id}')" class="flex-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 shadow-sm transition-all">
                                         <i class="fas fa-file-contract"></i> Agreement (QR)
@@ -1244,6 +1621,7 @@
         window.sendWhatsAppNotice = (hid, tid) => {
             const h = state.houses.find(x => x.id === hid);
             const t = h ? h.tenants.find(x => x.id === tid) : null;
+            const cfg = state.paymentSettings || { method: "Easypaisa", accountNumber: "03197921318", accountName: "Muhammad Usama" };
 
             if (!t) return alert("Tenant details not found.");
             if (!t.whatsapp) return alert("No WhatsApp phone number saved for this tenant.");
@@ -1276,31 +1654,17 @@
                 message += `\n💵 *TOTAL AMOUNT DUE:* *Rs ${Number(t.rent).toLocaleString()}*\n`;
             }
 
+            message += `\n*PAYMENT METHOD:* ${cfg.method}\n`;
+            message += `*Account Name:* ${cfg.accountName}\n`;
+            message += `*Account Number:* ${cfg.accountNumber}\n`;
+
             message += `\n--------------------------------------\n`;
-            message += `Please clear all dues (Rent + Utilities HESCO/SSGC) at your earliest convenience. Ignore if cleared.\n\n`;
-            message += `*Dur Muhammad Noonari*\n`;
+            message += `Please clear all dues. After payment, send payment receipt screenshot on WhatsApp.\n\n`;
+            message += `*${cfg.accountName}*\n`;
             message += `_Finance & Property Management_`;
 
             const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
             window.open(waUrl, '_blank');
-        };
-
-        window.sendLeaseRenewalWhatsApp = (hid, tid) => {
-            const h = state.houses.find(x => x.id === hid);
-            const t = h ? h.tenants.find(x => x.id === tid) : null;
-            if (!t || !t.whatsapp) return alert("Tenant or WhatsApp number missing.");
-
-            const phone = formatPhoneNumberPK(t.whatsapp);
-            const leaseEnd = t.leaseEndDate ? new Date(t.leaseEndDate).toLocaleDateString('en-GB') : 'Upcoming';
-
-            let msg = `*LEASE MILESTONE RENEWAL NOTICE*\n`;
-            msg += `--------------------------------------\n`;
-            msg += `Dear *${t.name}*,\n\n`;
-            msg += `This notice confirms that your tenancy agreement for *${h.name}* is reaching its 30-day renewal milestone on *${leaseEnd}*.\n\n`;
-            msg += `Please contact management to review and execute updated lease terms.\n\n`;
-            msg += `Regards,\n*Dur Muhammad Noonari*`;
-
-            window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
         };
 
         function renderChildren() {
@@ -1415,21 +1779,51 @@
             document.getElementById('full-history-table').innerHTML = txs.map(t => `
                 <tr class="border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
                     <td class="p-4 text-xs text-slate-400">${t.date}</td>
-                    <td class="p-4 font-bold text-xs text-slate-800 dark:text-slate-200">${t.desc}</td>
+                    <td class="p-4 font-bold text-xs text-slate-800 dark:text-slate-200">
+                        ${t.desc}
+                        ${t.paymentProof ? `<br><span class="text-[9px] text-indigo-500 font-bold"><i class="fas fa-paperclip"></i> Proof Attached</span>` : ''}
+                    </td>
                     <td class="p-4 text-xs font-semibold text-slate-600 dark:text-slate-400">${t.tenantName || 'N/A'}</td>
                     <td class="p-4"><span class="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-[9px] font-bold uppercase text-slate-500 dark:text-slate-300">${t.cat}</span></td>
                     <td class="p-4 text-right font-bold text-xs ${t.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}">Rs ${(t.amount || 0).toLocaleString()}</td>
-                    <td class="p-4 text-center"><button onclick="window.deleteTrans('${t.id}')" class="text-slate-300 hover:text-rose-500"><i class="fas fa-trash text-xs"></i></button></td>
+                    <td class="p-4 text-center">
+                        ${t.verificationStatus === 'Pending Verification' ? `
+                            <button onclick="window.verifyOnlinePayment('${t.id}')" class="bg-emerald-500 text-white px-2 py-1 rounded text-[9px] font-bold mr-1">Verify</button>
+                            <button onclick="window.rejectOnlinePayment('${t.id}')" class="bg-rose-500 text-white px-2 py-1 rounded text-[9px] font-bold">Reject</button>
+                        ` : `
+                            <button onclick="window.deleteTrans('${t.id}')" class="text-slate-300 hover:text-rose-500"><i class="fas fa-trash text-xs"></i></button>
+                        `}
+                    </td>
                 </tr>`).join('') || `<tr><td colspan="6" class="text-center py-6 text-sm text-slate-400">No matching transactions found.</td></tr>`;
         }
+
+        window.verifyOnlinePayment = (txId) => {
+            const tx = state.transactions.find(x => x.id === txId);
+            if (tx) {
+                tx.verificationStatus = 'Verified';
+                tx.paymentStatus = 'Verified';
+                save(); renderAll();
+                alert("Payment verified successfully!");
+            }
+        };
+
+        window.rejectOnlinePayment = (txId) => {
+            const tx = state.transactions.find(x => x.id === txId);
+            if (tx) {
+                tx.verificationStatus = 'Rejected';
+                tx.paymentStatus = 'Rejected';
+                save(); renderAll();
+                alert("Payment rejected. Financial record updated.");
+            }
+        };
 
         function exportSearchResultsCSV() {
             const filteredData = getFilteredTransactions();
             if(!filteredData.length) return alert("No transactions available to export.");
 
-            let csvContent = "data:text/csv;charset=utf-8,ID,Type,Category,Tenant,Description,Amount (PKR),Date\n";
+            let csvContent = "data:text/csv;charset=utf-8,ID,Type,Category,Tenant,Description,Amount (PKR),Date,Method,Status\n";
             filteredData.forEach(t => {
-                csvContent += `"${t.id}","${t.type}","${t.cat}","${t.tenantName || ''}","${t.desc.replace(/"/g, '""')}",${t.amount},"${t.date}"\n`;
+                csvContent += `"${t.id}","${t.type}","${t.cat}","${t.tenantName || ''}","${t.desc.replace(/"/g, '""')}",${t.amount},"${t.date}","${t.paymentMethod || 'Cash'}","${t.verificationStatus || 'Verified'}"\n`;
             });
 
             const encodedUri = encodeURI(csvContent);
@@ -1481,21 +1875,273 @@
             document.getElementById('modal-repay-loan').classList.remove('hidden');
         };
 
+        // --- Multi-Step Payment Modal Logic (Steps 1 to 5) ---
         window.openReceiveModal = (hid, tid, tname, defaultRent) => {
-            document.getElementById('receive-tenant-id').value = tid;
-            document.getElementById('receive-house-id').value = hid;
-            document.getElementById('receive-agreed-rent').value = defaultRent;
-            document.getElementById('receive-modal-title').innerText = `Receive Payment: ${tname}`;
-            
+            const h = state.houses.find(x => x.id === hid);
             const activeDues = state.billCollections.filter(c => c.tenantId === tid && c.status === 'pending');
-            const totalPendingAmt = activeDues.reduce((s, c) => s + (c.amount || 0), 0);
-            
-            document.getElementById('receive-amount').value = totalPendingAmt > 0 ? totalPendingAmt : defaultRent;
-            document.getElementById('receive-desc').value = activeDues.length > 0 ? `Rent & Utility Payment` : `Monthly Rent Payment`;
-            
+            const totalOutstanding = activeDues.reduce((s, c) => s + (c.amount || 0), 0) || defaultRent;
+
+            activePayState = {
+                houseId: hid,
+                tenantId: tid,
+                tenantName: tname,
+                houseName: h ? h.name : '',
+                totalBill: totalOutstanding,
+                amountPaid: totalOutstanding,
+                remainingBalance: 0,
+                paymentMethod: null,
+                paymentProof: null,
+                paymentProofFileName: null,
+                activeDuesList: activeDues
+            };
+
+            document.getElementById('receive-modal-title').innerText = `Collect Payment: ${tname}`;
+            document.getElementById('step1-total-bill').innerText = `Rs ${totalOutstanding.toLocaleString()}`;
+            document.getElementById('pay-input-amount').value = totalOutstanding;
+            document.getElementById('pay-input-desc').value = `Rent & Utility Payment (${new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })})`;
+
+            calcPaymentStep1();
+            clearUploadedProof();
+            goToPayStep(1);
+
             document.getElementById('modal-container').classList.remove('hidden');
             document.getElementById('modal-container').classList.add('flex');
             document.getElementById('modal-receive-payment').classList.remove('hidden');
+        };
+
+        window.calcPaymentStep1 = () => {
+            const inputAmt = parseFloat(document.getElementById('pay-input-amount').value) || 0;
+            
+            // Security Validation Guard against excessive payments unless total is 0
+            if (activePayState.totalBill > 0 && inputAmt > activePayState.totalBill) {
+                alert(`Amount paid cannot exceed total bill dues (Rs ${activePayState.totalBill.toLocaleString()}).`);
+                document.getElementById('pay-input-amount').value = activePayState.totalBill;
+                return calcPaymentStep1();
+            }
+
+            activePayState.amountPaid = inputAmt;
+            activePayState.remainingBalance = Math.max(0, activePayState.totalBill - inputAmt);
+            document.getElementById('step1-remaining-bill').innerText = `Rs ${activePayState.remainingBalance.toLocaleString()}`;
+        };
+
+        window.goToPayStep = (stepNum) => {
+            [1, 2, 3, 4, 5].forEach(s => {
+                document.getElementById(`pay-step-${s}`).classList.add('hidden');
+                const dot = document.getElementById(`step-dot-${s}`);
+                if (s <= stepNum) {
+                    dot.className = "h-1.5 flex-1 rounded-full bg-indigo-600";
+                } else {
+                    dot.className = "h-1.5 flex-1 rounded-full bg-slate-200 dark:bg-slate-700";
+                }
+            });
+
+            document.getElementById(`pay-step-${stepNum}`).classList.remove('hidden');
+
+            if (stepNum === 3) {
+                const cfg = state.paymentSettings || { method: "Easypaisa", accountNumber: "03197921318", accountName: "Muhammad Usama" };
+                document.getElementById('step3-gateway-name').innerText = cfg.method;
+                document.getElementById('step3-gateway-acc').innerText = `${cfg.accountName} — ${cfg.accountNumber}`;
+                
+                const qrBox = document.getElementById('step3-qr-box');
+                qrBox.innerHTML = '';
+                const qrPayload = `PAY:${cfg.method}:${cfg.accountNumber}:${cfg.accountName}`;
+                qrBox.appendChild(generateQRCanvas(qrPayload, 80));
+            }
+
+            if (stepNum === 4) {
+                document.getElementById('rev-tenant-name').innerText = activePayState.tenantName;
+                document.getElementById('rev-house-name').innerText = activePayState.houseName;
+                document.getElementById('rev-total-bill').innerText = `Rs ${activePayState.totalBill.toLocaleString()}`;
+                document.getElementById('rev-amount-paid').innerText = `Rs ${activePayState.amountPaid.toLocaleString()}`;
+                document.getElementById('rev-remaining').innerText = `Rs ${activePayState.remainingBalance.toLocaleString()}`;
+                document.getElementById('rev-method').innerText = activePayState.paymentMethod;
+                document.getElementById('rev-status').innerText = activePayState.paymentMethod === 'Cash' ? 'Paid & Verified' : 'Proof Uploaded / Pending Verification';
+            }
+        };
+
+        window.selectPaymentMethod = (method) => {
+            activePayState.paymentMethod = method;
+            document.getElementById('btn-method-cash').className = method === 'Cash' ? "p-5 border-2 rounded-2xl flex flex-col items-center gap-2 border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 font-bold" : "p-5 border-2 rounded-2xl flex flex-col items-center gap-2 border-slate-200 dark:border-slate-700";
+            document.getElementById('btn-method-online').className = method === 'Online Payment' ? "p-5 border-2 rounded-2xl flex flex-col items-center gap-2 border-indigo-600 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 font-bold" : "p-5 border-2 rounded-2xl flex flex-col items-center gap-2 border-slate-200 dark:border-slate-700";
+
+            const btnNext = document.getElementById('btn-step2-next');
+            btnNext.disabled = false;
+            btnNext.className = "flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-xl font-bold shadow-lg";
+        };
+
+        window.proceedStep2Next = () => {
+            if (activePayState.paymentMethod === 'Cash') {
+                goToPayStep(4);
+            } else {
+                goToPayStep(3);
+            }
+        };
+
+        window.handleProofUpload = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert("File size exceeds 5MB limit. Please upload a smaller file.");
+                return;
+            }
+
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+            if (!allowedTypes.includes(file.type)) {
+                alert("Invalid file format. Please upload JPG, PNG, or PDF.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                tempProofBase64 = evt.target.result;
+                tempProofMeta = {
+                    fileName: file.name,
+                    uploadTimestamp: new Date().toISOString()
+                };
+
+                activePayState.paymentProof = tempProofBase64;
+                activePayState.paymentProofFileName = file.name;
+                activePayState.paymentProofUploadedAt = tempProofMeta.uploadTimestamp;
+
+                document.getElementById('pay-proof-filename').innerText = `Uploaded: ${file.name}`;
+                document.getElementById('proof-attached-name').innerText = file.name;
+                document.getElementById('pay-proof-preview-container').classList.remove('hidden');
+
+                const btnNext = document.getElementById('btn-step3-next');
+                btnNext.disabled = false;
+                btnNext.className = "flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-xl font-bold shadow-lg";
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.clearUploadedProof = () => {
+            tempProofBase64 = null;
+            tempProofMeta = null;
+            activePayState.paymentProof = null;
+            activePayState.paymentProofFileName = null;
+            activePayState.paymentProofUploadedAt = null;
+
+            document.getElementById('pay-proof-input').value = '';
+            document.getElementById('pay-proof-filename').innerText = 'Click to Upload Proof (PDF, JPG, PNG)';
+            document.getElementById('pay-proof-preview-container').classList.add('hidden');
+
+            const btnNext = document.getElementById('btn-step3-next');
+            btnNext.disabled = true;
+            btnNext.className = "flex-1 bg-indigo-600 opacity-50 cursor-not-allowed text-white py-3.5 rounded-xl font-bold shadow-lg";
+        };
+
+        window.confirmAndSubmitPayment = () => {
+            const cfg = state.paymentSettings || { method: "Easypaisa", accountNumber: "03197921318", accountName: "Muhammad Usama" };
+            const rcpNumber = 'RCP-' + Date.now().toString().slice(-6);
+            const currentDateStr = new Date().toLocaleDateString('en-GB');
+
+            // Deduct / Clear pending bill collections iteratively
+            let remainingPayment = activePayState.amountPaid;
+            activePayState.activeDuesList.forEach(due => {
+                if (remainingPayment >= due.amount) {
+                    due.status = 'collected';
+                    remainingPayment -= due.amount;
+                } else if (remainingPayment > 0) {
+                    due.amount -= remainingPayment;
+                    remainingPayment = 0;
+                }
+            });
+
+            // Create remaining balance pending bill record if partial payment made
+            if (activePayState.remainingBalance > 0 && activePayState.activeDuesList.length === 0) {
+                state.billCollections.push({
+                    id: 'r' + Date.now() + activePayState.tenantId,
+                    tenantId: activePayState.tenantId,
+                    tenantName: activePayState.tenantName,
+                    houseId: activePayState.houseId,
+                    houseName: activePayState.houseName,
+                    amount: activePayState.remainingBalance,
+                    type: 'Partial Rent Balance',
+                    month: new Date().toISOString().slice(0, 7),
+                    status: 'pending',
+                    dueDate: new Date().toISOString()
+                });
+            }
+
+            const isOnline = activePayState.paymentMethod === 'Online Payment';
+            const payStatus = isOnline ? 'Proof Uploaded / Pending Verification' : 'Paid';
+            const verifStatus = isOnline ? 'Pending Verification' : 'Verified';
+
+            // Record transaction permanently in ledger
+            const txRecord = {
+                id: 'tx' + Date.now(),
+                type: 'income',
+                amount: activePayState.amountPaid,
+                tenantId: activePayState.tenantId,
+                tenantName: activePayState.tenantName,
+                desc: `Rent Payment (${activePayState.paymentMethod}): ${activePayState.tenantName}`,
+                cat: 'Rent',
+                date: currentDateStr,
+                paymentMethod: activePayState.paymentMethod,
+                paymentStatus: payStatus,
+                verificationStatus: verifStatus,
+                paymentProof: activePayState.paymentProof,
+                paymentProofFileName: activePayState.paymentProofFileName,
+                paymentProofUploadedAt: activePayState.paymentProofUploadedAt,
+                paymentAccountName: isOnline ? cfg.accountName : null,
+                paymentAccountNumber: isOnline ? cfg.accountNumber : null,
+                receiptNumber: rcpNumber
+            };
+
+            state.transactions.push(txRecord);
+
+            // Populate Step 5 UI
+            document.getElementById('step5-receipt-no').innerText = `#${rcpNumber}`;
+            document.getElementById('s5-tenant').innerText = activePayState.tenantName;
+            document.getElementById('s5-property').innerText = activePayState.houseName;
+            document.getElementById('s5-paid').innerText = `Rs ${activePayState.amountPaid.toLocaleString()}`;
+            document.getElementById('s5-method').innerText = activePayState.paymentMethod;
+
+            // Generate official PDF Receipt
+            const h = state.houses.find(x => x.id === activePayState.houseId);
+            const t = h ? h.tenants.find(x => x.id === activePayState.tenantId) : null;
+
+            const receiptPayload = {
+                receiptNumber: rcpNumber,
+                tenantName: activePayState.tenantName,
+                cnic: t ? t.cnic : '',
+                houseName: activePayState.houseName,
+                agreedRent: activePayState.totalBill,
+                amountPaid: activePayState.amountPaid,
+                remainingBalance: activePayState.remainingBalance,
+                paymentMethod: activePayState.paymentMethod,
+                paymentDate: currentDateStr,
+                rentMonth: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+                items: activePayState.activeDuesList.length ? activePayState.activeDuesList : [{ type: 'Rent Dues', amount: activePayState.totalBill, month: 'Current' }]
+            };
+
+            generatePDF(receiptPayload);
+
+            // Configure WhatsApp sending button
+            document.getElementById('btn-step5-wa').onclick = () => {
+                const phone = t ? formatPhoneNumberPK(t.whatsapp) : '';
+                if (!phone) return alert("Tenant WhatsApp number is missing.");
+
+                let msg = `Hello ${activePayState.tenantName},\n` +
+                    `Your rent payment has been recorded successfully.\n\n` +
+                    `Payment Receipt\n` +
+                    `Receipt No: ${rcpNumber}\n` +
+                    `Property: ${activePayState.houseName}\n` +
+                    `Rent Month: ${receiptPayload.rentMonth}\n` +
+                    `Amount Paid: Rs. ${activePayState.amountPaid.toLocaleString()}\n` +
+                    `Payment Method: ${activePayState.paymentMethod}\n` +
+                    `Payment Date: ${currentDateStr}\n` +
+                    `Remaining Balance: Rs. ${activePayState.remainingBalance.toLocaleString()}\n\n` +
+                    `Thank you.`;
+
+                const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+                window.open(waUrl, '_blank');
+            };
+
+            save();
+            renderAll();
+            goToPayStep(5);
         };
 
         window.issueRent = (hid) => {
@@ -1515,27 +2161,6 @@
             save(); renderAll();
             alert(`Rent for ${h.name} added to Pending Ledger.`);
             document.querySelector('[data-view="dashboard"]').click();
-        };
-
-        window.collectBill = (cid) => {
-            const c = state.billCollections.find(x => x.id === cid);
-            if (!c) return;
-            const h = state.houses.find(x => x.id === c.houseId);
-            const t = h ? h.tenants.find(x => x.id === c.tenantId) : null;
-            c.status = 'collected';
-            
-            state.transactions.push({ 
-                id: 'tx'+Date.now(), type: 'income', amount: c.amount, 
-                tenantId: c.tenantId, tenantName: c.tenantName,
-                desc: `${c.type === 'Rent' ? 'Rent Received' : 'Utility Collected'}: ${c.tenantName} (${c.type})`, 
-                cat: 'Rent', 
-                date: new Date().toLocaleDateString('en-GB') 
-            });
-            
-            if(confirm("Payment marked as PAID! Do you want to download a PDF receipt with embedded QR verification?")) {
-                generatePDF({ tenantName: c.tenantName, cnic: t?.cnic || '', houseName: c.houseName, agreedRent: c.amount, amountPaid: c.amount, remainingBalance: 0, items: [{ type: c.type, amount: c.amount, month: c.month }] });
-            }
-            save(); renderAll();
         };
 
         window.deleteTrans = (tid) => {
@@ -1579,60 +2204,6 @@
                     ['new-tenant-name', 'new-tenant-rent', 'new-tenant-whatsapp', 'new-tenant-cnic', 'new-tenant-date', 'new-tenant-address'].forEach(id => document.getElementById(id).value = '');
                 }
             } else alert("Name and valid Rent required!");
-        };
-
-        document.getElementById('receive-form').onsubmit = (e) => {
-            e.preventDefault();
-            const tid = document.getElementById('receive-tenant-id').value;
-            const hid = document.getElementById('receive-house-id').value;
-            const amtPaid = parseFloat(document.getElementById('receive-amount').value);
-            const desc = document.getElementById('receive-desc').value;
-            const wantPdf = document.getElementById('receive-pdf').checked;
-            
-            const h = state.houses.find(x => x.id === hid);
-            const t = h ? h.tenants.find(x => x.id === tid) : null;
-            
-            if (!t || isNaN(amtPaid)) return;
-
-            const activeDues = state.billCollections.filter(c => c.tenantId === tid && c.status === 'pending');
-            const totalOutstanding = activeDues.reduce((sum, item) => sum + (item.amount || 0), 0) || t.rent;
-            const remainingBalance = Math.max(0, totalOutstanding - amtPaid);
-
-            let remainingPayment = amtPaid;
-            activeDues.forEach(due => {
-                if (remainingPayment >= due.amount) {
-                    due.status = 'collected';
-                    remainingPayment -= due.amount;
-                } else if (remainingPayment > 0) {
-                    due.amount -= remainingPayment;
-                    remainingPayment = 0;
-                }
-            });
-
-            state.transactions.push({
-                id: 'tx'+Date.now(), type: 'income', amount: amtPaid,
-                tenantId: t.id, tenantName: t.name,
-                desc: `Payment from ${t.name}: ${desc}`, cat: 'Rent',
-                date: new Date().toLocaleDateString('en-GB')
-            });
-
-            if (remainingBalance > 0 && activeDues.length === 0) {
-                state.billCollections.push({
-                    id: 'r'+Date.now()+t.id, tenantId: t.id, tenantName: t.name,
-                    houseId: h.id, houseName: h.name, amount: remainingBalance,
-                    type: 'Partial Rent Balance', month: new Date().toISOString().slice(0, 7), status: 'pending', dueDate: new Date().toISOString()
-                });
-            }
-            
-            if (wantPdf) {
-                generatePDF({ 
-                    tenantName: t.name, cnic: t.cnic || '', houseName: h.name, 
-                    agreedRent: t.rent, amountPaid: amtPaid, remainingBalance: remainingBalance, 
-                    items: activeDues.length ? activeDues : [{ type: 'Rent Dues', amount: t.rent, month: 'Current' }]
-                });
-            }
-            
-            save(); renderAll(); closeModals();
         };
 
         document.getElementById('bill-form').onsubmit = (e) => {
